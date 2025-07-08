@@ -1,0 +1,14 @@
+# Biome が処理するファイルを Prettier から除外
+**/*.js
+**/*.jsx
+**/*.ts
+**/*.tsx
+**/*.json
+**/*.jsonc
+**/*.css
+
+# その他の除外ファイル
+node_modules
+dist
+build
+.git

@@ -1,0 +1,23 @@
+{
+	"$schema": "https://biomejs.dev/schemas/1.9.0/schema.json",
+	"formatter": { "lineWidth": 120 },
+	"organizeImports": {
+		"enabled": false
+	},
+	"files": {
+		"include": ["src/**/*", "test/**/*", "*.ts", "*.js", "*.json", "*.jsonc"],
+		"ignore": [
+			"package-lock.json",
+			"**/node_modules/**",
+			"**/dist/**",
+			"**/build/**",
+			".git/**",
+			"**/*.md",
+			"**/*.html",
+			"**/*.yaml",
+			"**/*.yml",
+			"**/*.vue",
+			"**/*.svelte"
+		]
+	}
+}
