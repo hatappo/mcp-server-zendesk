@@ -1,0 +1,17 @@
+{
+	"mcpServers": {
+		"deepwiki": {
+			"type": "sse",
+			"url": "https://mcp.deepwiki.com/sse"
+		},
+		"zendesk": {
+			"command": "node",
+			"args": ["src/index.ts"],
+			"env": {
+				"ZENDESK_SUBDOMAIN": "${ZENDESK_SUBDOMAIN}",
+				"ZENDESK_USERNAME": "${ZENDESK_USERNAME}",
+				"ZENDESK_API_TOKEN": "${ZENDESK_API_TOKEN}"
+			}
+		}
+	}
+}
