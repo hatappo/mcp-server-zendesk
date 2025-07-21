@@ -27,3 +27,7 @@ pnpm-debug.log*
 
 # Node modules
 **/node_modules/
+
+# LLM/AI
+**/.claude/settings.local.json
+DEV.md
