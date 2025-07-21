@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import dotenv from "dotenv-flow";
+import { handleGetArticleContent } from "../src/tools/get-article-content.ts";
 import { handleSearchArticles } from "../src/tools/search-articles.ts";
 
 // 環境変数を読み込み
@@ -35,6 +36,32 @@ async function testSearchArticles() {
 	}
 }
 
+async function testGetArticleContent(articleId: number) {
+	console.log("\n📄 Testing Get Article Content...");
+
+	try {
+		const result = await handleGetArticleContent({
+			article_id: articleId,
+			locale: "ja",
+		});
+
+		const response = JSON.parse(result.content[0].text);
+		if (response.success) {
+			console.log("✅ Article retrieval successful!");
+			console.log(`Title: ${response.article.title}`);
+			console.log(`URL: ${response.article.url}`);
+			console.log(`Body (first 200 chars): ${response.article.body?.substring(0, 200)}...`);
+			console.log(`Created: ${response.article.created_at}`);
+			console.log(`Updated: ${response.article.updated_at}`);
+		} else {
+			console.log("❌ Article retrieval failed:");
+			console.log(`Error: ${response.error}`);
+		}
+	} catch (error) {
+		console.error("❌ Article retrieval error:", error);
+	}
+}
+
 async function main() {
 	console.log("🚀 Starting Zendesk API Integration Test\n");
 
@@ -58,6 +85,21 @@ async function main() {
 
 	// 記事検索テスト
 	await testSearchArticles();
+
+	// 記事検索の結果から最初の記事IDを取得してテスト
+	try {
+		const searchResult = await handleSearchArticles({
+			query: "アカウント",
+			per_page: 1,
+		});
+		const searchResponse = JSON.parse(searchResult.content[0].text);
+		if (searchResponse.success && searchResponse.articles.length > 0) {
+			const articleId = searchResponse.articles[0].id;
+			await testGetArticleContent(articleId);
+		}
+	} catch (error) {
+		console.error("❌ Unable to test article content retrieval:", error);
+	}
 
 	console.log("\n🏁 Integration test completed");
 }

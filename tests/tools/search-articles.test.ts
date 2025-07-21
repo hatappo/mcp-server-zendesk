@@ -30,16 +30,18 @@ describe("Search Articles Tool", () => {
 	describe("handleSearchArticles", () => {
 		it("should handle successful search", async () => {
 			const mockResponse = {
-				results: [
-					{
-						id: 1,
-						title: "Test Article",
-						html_url: "https://example.zendesk.com/hc/articles/1",
-						body: "This is a test article content",
-						created_at: "2023-01-01T00:00:00Z",
-						updated_at: "2023-01-01T00:00:00Z",
-					},
-				],
+				result: {
+					results: [
+						{
+							id: 1,
+							title: "Test Article",
+							html_url: "https://example.zendesk.com/hc/articles/1",
+							body: "This is a test article content",
+							created_at: "2023-01-01T00:00:00Z",
+							updated_at: "2023-01-01T00:00:00Z",
+						},
+					],
+				},
 			};
 
 			mockSearchArticles.mockResolvedValue(mockResponse);
@@ -89,16 +91,18 @@ describe("Search Articles Tool", () => {
 		it("should truncate long article body", async () => {
 			const longBody = "a".repeat(300);
 			const mockResponse = {
-				results: [
-					{
-						id: 1,
-						title: "Test Article",
-						html_url: "https://example.zendesk.com/hc/articles/1",
-						body: longBody,
-						created_at: "2023-01-01T00:00:00Z",
-						updated_at: "2023-01-01T00:00:00Z",
-					},
-				],
+				result: {
+					results: [
+						{
+							id: 1,
+							title: "Test Article",
+							html_url: "https://example.zendesk.com/hc/articles/1",
+							body: longBody,
+							created_at: "2023-01-01T00:00:00Z",
+							updated_at: "2023-01-01T00:00:00Z",
+						},
+					],
+				},
 			};
 
 			mockSearchArticles.mockResolvedValue(mockResponse);

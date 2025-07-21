@@ -2,6 +2,7 @@ import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { Logger } from "pino";
 import { createTicketTool, handleCreateTicket } from "./create-ticket.ts";
+import { getArticleContentTool, handleGetArticleContent } from "./get-article-content.ts";
 import { handleSearchArticles, searchArticlesTool } from "./search-articles.ts";
 
 export function setupTools(server: Server, logger: Logger): void {
@@ -9,7 +10,7 @@ export function setupTools(server: Server, logger: Logger): void {
 
 	server.setRequestHandler(ListToolsRequestSchema, async () => {
 		return {
-			tools: [searchArticlesTool, createTicketTool],
+			tools: [searchArticlesTool, getArticleContentTool, createTicketTool],
 		};
 	});
 
@@ -19,6 +20,8 @@ export function setupTools(server: Server, logger: Logger): void {
 		switch (name) {
 			case "search_articles":
 				return await handleSearchArticles(args);
+			case "get_article_content":
+				return await handleGetArticleContent(args);
 			case "create_ticket":
 				return await handleCreateTicket(args);
 			default:

@@ -1,4 +1,5 @@
 import pkg from "node-zendesk";
+
 const { createClient } = pkg;
 
 let client: any | null = null;
