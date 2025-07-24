@@ -5,6 +5,7 @@ Zendesk API と連携する MCP（Model Context Protocol）サーバーです。
 ## 機能
 
 - Zendesk Help Center の記事検索
+- Zendesk Help Center の記事内容取得
 - Zendesk チケットの作成
 
 ## セットアップ
@@ -46,6 +47,16 @@ search_articles ツールを使用して、Zendesk Help Centerの記事を検索
 - locale: ロケール（デフォルト: "en-us"）
 - per_page: 1ページあたりの結果数（デフォルト: 10）
 - page: ページ番号（デフォルト: 1）
+```
+
+### 記事内容取得
+
+```
+get_article_content ツールを使用して、特定の記事の全内容を取得できます。
+
+パラメータ:
+- article_id: 記事ID（必須）
+- locale: ロケール（デフォルト: "ja"）
 ```
 
 ### チケット作成
@@ -123,9 +134,10 @@ mcp-server-zendesk/
 ├── src/
 │   ├── index.ts              # エントリーポイント
 │   ├── tools/
-│   │   ├── index.ts          # ツールセットアップ
-│   │   ├── search-articles.ts # 記事検索ツール
-│   │   └── create-ticket.ts   # チケット作成ツール
+│   │   ├── index.ts              # ツールセットアップ
+│   │   ├── search-articles.ts     # 記事検索ツール
+│   │   ├── get-article-content.ts # 記事内容取得ツール
+│   │   └── create-ticket.ts       # チケット作成ツール
 │   └── utils/
 │       ├── logger.ts         # ロギング設定
 │       ├── error-handler.ts  # エラーハンドリング

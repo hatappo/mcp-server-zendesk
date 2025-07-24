@@ -30,4 +30,3 @@ pnpm-debug.log*
 
 # LLM/AI
 **/.claude/settings.local.json
-DEV.md

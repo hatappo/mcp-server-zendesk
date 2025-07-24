@@ -1,0 +1,130 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { handleGetArticleContent } from "../../src/tools/get-article-content.ts";
+import { getZendeskClient } from "../../src/utils/zendesk-client.ts";
+
+vi.mock("../../src/utils/zendesk-client.ts");
+
+describe("handleGetArticleContent", () => {
+	const mockClient = {
+		helpcenter: {
+			articles: {
+				show: vi.fn(),
+				showWithLocale: vi.fn(),
+			},
+		},
+	};
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		(getZendeskClient as any).mockReturnValue(mockClient);
+	});
+
+	it("should successfully retrieve an article by ID", async () => {
+		const mockArticle = {
+			id: 123456,
+			title: "Sample Article",
+			html_url: "https://example.zendesk.com/hc/en-us/articles/123456",
+			body: "<p>This is the article content</p>",
+			created_at: "2024-01-01T00:00:00Z",
+			updated_at: "2024-01-02T00:00:00Z",
+			author_id: 789,
+			section_id: 456,
+			promoted: false,
+			position: 1,
+			label_names: ["guide", "tutorial"],
+			locale: "ja-jp",
+		};
+
+		mockClient.helpcenter.articles.showWithLocale.mockResolvedValue({
+			result: mockArticle,
+		});
+
+		const result = await handleGetArticleContent({
+			article_id: 123456,
+			locale: "ja-jp",
+		});
+
+		expect(mockClient.helpcenter.articles.showWithLocale).toHaveBeenCalledWith("ja-jp", 123456);
+		expect(result.content[0].type).toBe("text");
+
+		const response = JSON.parse(result.content[0].text);
+		expect(response.success).toBe(true);
+		expect(response.article).toMatchObject({
+			id: 123456,
+			title: "Sample Article",
+			url: "https://example.zendesk.com/hc/en-us/articles/123456",
+			body: "<p>This is the article content</p>",
+			locale: "ja-jp",
+		});
+	});
+
+	it("should use default locale when not specified", async () => {
+		const mockArticle = {
+			id: 123456,
+			title: "記事のタイトル",
+			html_url: "https://example.zendesk.com/hc/ja/articles/123456",
+			body: "<p>記事の内容</p>",
+			created_at: "2024-01-01T00:00:00Z",
+			updated_at: "2024-01-02T00:00:00Z",
+			author_id: 789,
+			section_id: 456,
+			promoted: false,
+			position: 1,
+			label_names: [],
+			locale: "ja",
+		};
+
+		mockClient.helpcenter.articles.showWithLocale.mockResolvedValue({
+			result: mockArticle,
+		});
+
+		const result = await handleGetArticleContent({
+			article_id: 123456,
+		});
+
+		expect(mockClient.helpcenter.articles.showWithLocale).toHaveBeenCalledWith("ja", 123456);
+		const response = JSON.parse(result.content[0].text);
+		expect(response.success).toBe(true);
+		expect(response.article.locale).toBe("ja");
+	});
+
+	it("should handle article not found error", async () => {
+		mockClient.helpcenter.articles.showWithLocale.mockResolvedValue({
+			result: null,
+		});
+
+		const result = await handleGetArticleContent({
+			article_id: 999999,
+			locale: "ja",
+		});
+
+		const response = JSON.parse(result.content[0].text);
+		expect(response.success).toBe(false);
+		expect(response.error).toBe("Article not found");
+	});
+
+	it("should handle API errors", async () => {
+		mockClient.helpcenter.articles.showWithLocale.mockRejectedValue(
+			new Error("Failed to fetch article: API Error: Forbidden"),
+		);
+
+		const result = await handleGetArticleContent({
+			article_id: 123456,
+			locale: "ja",
+		});
+
+		const response = JSON.parse(result.content[0].text);
+		expect(response.success).toBe(false);
+		expect(response.error).toBe("Failed to fetch article: API Error: Forbidden");
+	});
+
+	it("should handle invalid input", async () => {
+		const result = await handleGetArticleContent({
+			article_id: "not-a-number",
+		});
+
+		const response = JSON.parse(result.content[0].text);
+		expect(response.success).toBe(false);
+		expect(response.error).toContain("Expected number");
+	});
+});
