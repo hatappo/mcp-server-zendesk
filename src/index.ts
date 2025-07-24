@@ -39,7 +39,9 @@ async function main() {
 	}
 }
 
-main().catch((error) => {
+try {
+	await main();
+} catch (error) {
 	console.error("Unhandled error:", error);
 	process.exit(1);
-});
+}

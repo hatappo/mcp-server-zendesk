@@ -6,76 +6,18 @@ import { handleSearchArticles } from "../src/tools/search-articles.ts";
 // 環境変数を読み込み
 dotenv.config();
 
-async function testSearchArticles() {
-	console.log("🔍 Testing Zendesk Article Search...");
-
-	try {
-		const result = await handleSearchArticles({
-			query: "アカウント",
-			// locale: "ja-jp",
-			per_page: 3,
-			page: 1,
-		});
-
-		const response = JSON.parse(result.content[0].text);
-		if (response.success) {
-			console.log("✅ Article search successful!");
-			console.log(`Found ${response.count} articles:`);
-			response.articles.forEach((article: { title: string; url: string; body: string }, index: number) => {
-				console.log(`  ${index + 1}. ${article.title}`);
-				console.log(`     URL: ${article.url}`);
-				console.log(`     Body: ${article.body}`);
-				console.log("");
-			});
-		} else {
-			console.log("❌ Article search failed:");
-			console.log(`Error: ${response.error}`);
-		}
-	} catch (error) {
-		console.error("❌ Article search error:", error);
-	}
-}
-
-async function testGetArticleContent(articleId: number) {
-	console.log("\n📄 Testing Get Article Content...");
-
-	try {
-		const result = await handleGetArticleContent({
-			article_id: articleId,
-			locale: "ja",
-		});
-
-		const response = JSON.parse(result.content[0].text);
-		if (response.success) {
-			console.log("✅ Article retrieval successful!");
-			console.log(`Title: ${response.article.title}`);
-			console.log(`URL: ${response.article.url}`);
-			console.log(`Body (first 200 chars): ${response.article.body?.substring(0, 200)}...`);
-			console.log(`Created: ${response.article.created_at}`);
-			console.log(`Updated: ${response.article.updated_at}`);
-		} else {
-			console.log("❌ Article retrieval failed:");
-			console.log(`Error: ${response.error}`);
-		}
-	} catch (error) {
-		console.error("❌ Article retrieval error:", error);
-	}
-}
-
 async function main() {
 	console.log("🚀 Starting Zendesk API Integration Test\n");
 
 	// 環境変数チェック
 	const requiredEnvVars = ["ZENDESK_SUBDOMAIN", "ZENDESK_USERNAME", "ZENDESK_API_TOKEN"];
-
 	const missingVars = requiredEnvVars.filter((varName) => !process.env[varName]);
+
 	if (missingVars.length > 0) {
-		console.error("❌ Missing required environment variables:");
-		missingVars.forEach((varName) => {
-			console.error(`  - ${varName}`);
-		});
-		console.error("\nPlease set these variables in your .env.local file.");
-		process.exit(1);
+		throw new Error(
+			`Missing required environment variables: ${missingVars.join(", ")}\n` +
+			"Please set these variables in your .env.local file."
+		);
 	}
 
 	console.log("✅ Environment variables configured");
@@ -84,30 +26,67 @@ async function main() {
 	console.log("");
 
 	// 記事検索テスト
-	await testSearchArticles();
+	console.log("🔍 Testing Zendesk Article Search...");
 
-	// 記事検索の結果から最初の記事IDを取得してテスト
-	try {
-		const searchResult = await handleSearchArticles({
-			query: "アカウント",
-			per_page: 1,
-		});
-		const searchResponse = JSON.parse(searchResult.content[0].text);
-		if (searchResponse.success && searchResponse.articles.length > 0) {
-			const articleId = searchResponse.articles[0].id;
-			await testGetArticleContent(articleId);
-		}
-	} catch (error) {
-		console.error("❌ Unable to test article content retrieval:", error);
+	const searchResult = await handleSearchArticles({
+		query: "PJMO",
+		per_page: 3,
+		page: 1,
+	});
+
+	const searchResponse = JSON.parse(searchResult.content[0].text);
+
+	if (!searchResponse.success) {
+		throw new Error(`Article search failed: ${searchResponse.error}`);
 	}
 
-	console.log("\n🏁 Integration test completed");
+	console.log("✅ Article search successful!");
+	console.log(`Found ${searchResponse.count} articles:`);
+
+	searchResponse.articles.forEach(
+		(article: { id: number; title: string; url: string; body: string }, index: number) => {
+			console.log(`  ${index + 1}. ${article.title}`);
+			console.log(`     URL: ${article.url}`);
+			console.log(`     Body: ${article.body}`);
+			console.log("");
+		},
+	);
+
+	// 検索結果から最初の記事IDを取得して記事内容取得をテスト
+	if (searchResponse.articles.length > 0) {
+		const firstArticleId = searchResponse.articles[0].id;
+		console.log(`\n📄 Testing Get Article Content for article ID: ${firstArticleId}...`);
+
+		const contentResult = await handleGetArticleContent({
+			article_id: firstArticleId,
+			locale: "ja",
+		});
+
+		const contentResponse = JSON.parse(contentResult.content[0].text);
+
+		if (!contentResponse.success) {
+			throw new Error(`Article retrieval failed: ${contentResponse.error}`);
+		}
+
+		console.log("✅ Article retrieval successful!");
+		console.log(`Title: ${contentResponse.article.title}`);
+		console.log(`URL: ${contentResponse.article.url}`);
+		console.log(`Body (first 200 chars): ${contentResponse.article.body?.substring(0, 200)}...`);
+		console.log(`Created: ${contentResponse.article.created_at}`);
+		console.log(`Updated: ${contentResponse.article.updated_at}`);
+	} else {
+		console.log("⚠️  No articles found in search results, skipping article content test");
+	}
+
+	console.log("\n✅ Integration test completed successfully");
 }
 
 // スクリプトが直接実行された場合にのみmain関数を実行
 if (import.meta.url === `file://${process.argv[1]}`) {
-	main().catch((error) => {
-		console.error("💥 Integration test failed:", error);
+	try {
+		await main();
+	} catch (error) {
+		console.error("❌ Integration test failed:", error);
 		process.exit(1);
-	});
+	}
 }
