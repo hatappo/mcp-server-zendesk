@@ -1,10 +1,22 @@
 #!/usr/bin/env node
 import dotenv from "dotenv-flow";
-import { handleGetArticleContent } from "../src/tools/get-article-content.ts";
-import { handleSearchArticles } from "../src/tools/search-articles.ts";
+import { handleGetArticleContent } from "../dist/tools/get-article-content.js";
+import { handleSearchArticles } from "../dist/tools/search-articles.js";
+import { requestContext } from "../dist/utils/request-context.js";
+import { setupLogger } from "../dist/utils/logger.js";
 
 // 環境変数を読み込み
 dotenv.config();
+
+// モックAuthContextを作成する関数
+function createMockAuthContext(overrides = {}) {
+	return {
+		userEmail: "test@example.com",
+		isUserEmailAllowed: true,
+		effectiveUsername: "test@example.com",
+		...overrides,
+	};
+}
 
 async function main() {
 	console.log("🚀 Starting Zendesk API Integration Test\n");
@@ -25,14 +37,25 @@ async function main() {
 	console.log(`Username: ${process.env.ZENDESK_USERNAME}`);
 	console.log("");
 
+	// リクエストコンテキストを作成
+	const logger = setupLogger();
+	const authContext = createMockAuthContext({
+		effectiveUsername: process.env.ZENDESK_USERNAME,
+	});
+
 	// 記事検索テスト
 	console.log("🔍 Testing Zendesk Article Search...");
 
-	const searchResult = await handleSearchArticles({
-		query: "PJMO",
-		per_page: 3,
-		page: 1,
-	});
+	const searchResult = await requestContext.run(
+		{ authContext, logger },
+		async () => {
+			return handleSearchArticles({
+				query: "PJMO",
+				per_page: 3,
+				page: 1,
+			});
+		}
+	);
 
 	const searchResponse = JSON.parse(searchResult.content[0].text);
 
@@ -44,7 +67,7 @@ async function main() {
 	console.log(`Found ${searchResponse.count} articles:`);
 
 	searchResponse.articles.forEach(
-		(article: { id: number; title: string; url: string; body: string }, index: number) => {
+		(article, index) => {
 			console.log(`  ${index + 1}. ${article.title}`);
 			console.log(`     URL: ${article.url}`);
 			console.log(`     Body: ${article.body}`);
@@ -57,10 +80,15 @@ async function main() {
 		const firstArticleId = searchResponse.articles[0].id;
 		console.log(`\n📄 Testing Get Article Content for article ID: ${firstArticleId}...`);
 
-		const contentResult = await handleGetArticleContent({
-			article_id: firstArticleId,
-			locale: "ja",
-		});
+		const contentResult = await requestContext.run(
+			{ authContext, logger },
+			async () => {
+				return handleGetArticleContent({
+					article_id: firstArticleId,
+					locale: "ja",
+				});
+			}
+		);
 
 		const contentResponse = JSON.parse(contentResult.content[0].text);
 

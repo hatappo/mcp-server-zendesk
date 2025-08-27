@@ -20,12 +20,10 @@ export function createMockAuthContext(overrides?: Partial<AuthContext>): AuthCon
  */
 export function createMockRequestContext(
 	authContext?: AuthContext,
-	sessionId?: string,
 ): RequestContext {
 	return {
 		authContext: authContext || createMockAuthContext(),
 		logger: setupLogger(),
-		sessionId: sessionId || "test-session-id",
 	};
 }
 

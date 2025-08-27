@@ -14,8 +14,7 @@
 dist/
 build/
 
-# TypeScript compiled files in scripts (should use .ts directly)
-scripts/*.js
+# Note: scripts/test-api.js is intentionally committed as it's a JS module for API testing
 
 # Test coverage reports
 coverage/
