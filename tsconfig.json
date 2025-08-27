@@ -3,13 +3,13 @@
 		"target": "ES2020",
 		"module": "ESNext",
 		"moduleResolution": "bundler",
-		"allowImportingTsExtensions": true,
-		"noEmit": true,
+		"allowImportingTsExtensions": false,
+		"noEmit": false,
 		"strict": true,
 		"esModuleInterop": true,
 		"outDir": "dist",
-		"rootDir": ".",
+		"rootDir": "src",
 		"types": ["node"]
 	},
-	"include": ["src/**/*", "scripts/**/*"]
+	"include": ["src/**/*"]
 }

@@ -1,28 +1,33 @@
 import pkg from "node-zendesk";
+import type { Logger } from "pino";
+import type { AuthContext } from "./auth-context.js";
+import { AuthContextManager } from "./auth-context.js";
 
 const { createClient } = pkg;
 
-let client: any | null = null;
+/**
+ * 認証コンテキストベースでZendeskクライアントを作成
+ * Lambda向けの最適化：キャッシュなし、リクエスト毎に新規作成
+ */
+export function getZendeskClient(authContext: AuthContext, logger: Logger): any {
+	const authManager = AuthContextManager.getInstance(logger);
+	const config = authManager.getZendeskClientConfig(authContext);
 
-export function getZendeskClient(): any {
-	if (!client) {
-		const subdomain = process.env.ZENDESK_SUBDOMAIN;
-		const username = process.env.ZENDESK_USERNAME;
-		const token = process.env.ZENDESK_API_TOKEN;
+	logger.debug(
+		{
+			subdomain: config.subdomain,
+			username: config.username,
+			userEmail: authContext.userEmail,
+			effectiveUsername: authContext.effectiveUsername,
+		},
+		"Creating Zendesk client for Lambda request",
+	);
 
-		if (!subdomain || !username || !token) {
-			throw new Error(
-				"Missing required Zendesk configuration. Please set ZENDESK_SUBDOMAIN, ZENDESK_USERNAME, and ZENDESK_API_TOKEN environment variables.",
-			);
-		}
-
-		client = createClient({
-			username: `${username}/token`,
-			token,
-			subdomain,
-			helpcenter: true,
-		} as any);
-	}
-
-	return client;
+	// リクエスト毎にクライアントを新規作成（ステートレス）
+	return createClient({
+		username: config.username,
+		token: config.token,
+		subdomain: config.subdomain,
+		helpcenter: true,
+	} as any);
 }

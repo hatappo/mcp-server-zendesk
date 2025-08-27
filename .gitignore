@@ -14,6 +14,9 @@
 dist/
 build/
 
+# TypeScript compiled files in scripts (should use .ts directly)
+scripts/*.js
+
 # Test coverage reports
 coverage/
 

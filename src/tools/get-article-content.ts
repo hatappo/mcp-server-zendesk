@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { getZendeskClient } from "../utils/zendesk-client.ts";
+import { requestContext } from "../utils/request-context.js";
+import { getZendeskClient } from "../utils/zendesk-client.js";
 
 const GetArticleContentSchema = z.object({
 	article_id: z.number().describe("The ID of the article to retrieve"),
@@ -22,7 +23,21 @@ export const getArticleContentTool = {
 export async function handleGetArticleContent(args: any) {
 	try {
 		const validatedArgs = GetArticleContentSchema.parse(args);
-		const client = getZendeskClient();
+
+		// リクエストコンテキストから認証情報とロガーを取得
+		const authContext = requestContext.getCurrentAuthContext();
+		const logger = requestContext.getCurrentLogger();
+
+		// 認証コンテキストを使用してZendeskクライアントを取得
+		const client = getZendeskClient(authContext, logger);
+
+		logger.info(
+			{
+				article_id: validatedArgs.article_id,
+				locale: validatedArgs.locale,
+			},
+			"Retrieving Zendesk article content",
+		);
 
 		// Get article using the node-zendesk client
 		// The API path is: /api/v2/help_center/{locale}/articles/{article_id}
@@ -52,6 +67,15 @@ export async function handleGetArticleContent(args: any) {
 			locale: article.locale,
 		};
 
+		logger.info(
+			{
+				article_id: article.id,
+				title: article.title,
+				locale: article.locale,
+			},
+			"Zendesk article content retrieved successfully",
+		);
+
 		return {
 			content: [
 				{
@@ -68,6 +92,16 @@ export async function handleGetArticleContent(args: any) {
 			],
 		};
 	} catch (error) {
+		const logger = requestContext.getCurrentLogger();
+		logger.error(
+			{
+				error,
+				article_id: args?.article_id,
+				locale: args?.locale,
+			},
+			"Failed to retrieve Zendesk article content",
+		);
+
 		return {
 			content: [
 				{

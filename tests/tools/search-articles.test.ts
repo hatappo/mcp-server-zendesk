@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { handleSearchArticles, searchArticlesTool } from "../../src/tools/search-articles.ts";
+import { runWithMockContext, setupRequestContextMocks } from "../utils/test-helpers.js";
 
 // Mock Zendesk client
 const mockSearchArticles = vi.fn();
@@ -14,9 +15,7 @@ vi.mock("../../src/utils/zendesk-client.ts", () => ({
 }));
 
 describe("Search Articles Tool", () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
+	setupRequestContextMocks();
 
 	describe("searchArticlesTool definition", () => {
 		it("should have correct tool definition", () => {
@@ -46,11 +45,13 @@ describe("Search Articles Tool", () => {
 
 			mockSearchArticles.mockResolvedValue(mockResponse);
 
-			const result = await handleSearchArticles({
-				query: "test",
-				locale: "en-us",
-				per_page: 10,
-				page: 1,
+			const result = await runWithMockContext(async () => {
+				return handleSearchArticles({
+					query: "test",
+					locale: "en-us",
+					per_page: 10,
+					page: 1,
+				});
 			});
 
 			expect(result.content[0].type).toBe("text");
@@ -62,9 +63,11 @@ describe("Search Articles Tool", () => {
 		});
 
 		it("should handle validation errors", async () => {
-			const result = await handleSearchArticles({
-				// Missing required query parameter
-				locale: "en-us",
+			const result = await runWithMockContext(async () => {
+				return handleSearchArticles({
+					// Missing required query parameter
+					locale: "en-us",
+				});
 			});
 
 			expect(result.content[0].type).toBe("text");
@@ -78,8 +81,10 @@ describe("Search Articles Tool", () => {
 				new Error("API Error"),
 			);
 
-			const result = await handleSearchArticles({
-				query: "test",
+			const result = await runWithMockContext(async () => {
+				return handleSearchArticles({
+					query: "test",
+				});
 			});
 
 			expect(result.content[0].type).toBe("text");
@@ -107,7 +112,9 @@ describe("Search Articles Tool", () => {
 
 			mockSearchArticles.mockResolvedValue(mockResponse);
 
-			const result = await handleSearchArticles({ query: "test" });
+			const result = await runWithMockContext(async () => {
+				return handleSearchArticles({ query: "test" });
+			});
 
 			const response = JSON.parse(result.content[0].text);
 			expect(response.articles[0].body).toBe(`${"a".repeat(200)}...`);

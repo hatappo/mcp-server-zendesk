@@ -1,9 +1,9 @@
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { Logger } from "pino";
-import { createTicketTool, handleCreateTicket } from "./create-ticket.ts";
-import { getArticleContentTool, handleGetArticleContent } from "./get-article-content.ts";
-import { handleSearchArticles, searchArticlesTool } from "./search-articles.ts";
+import { createTicketTool, handleCreateTicket } from "./create-ticket.js";
+import { getArticleContentTool, handleGetArticleContent } from "./get-article-content.js";
+import { handleSearchArticles, searchArticlesTool } from "./search-articles.js";
 
 export function setupTools(server: Server, logger: Logger): void {
 	logger.info("Setting up tools...");

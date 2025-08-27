@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { handleCreateTicket, createTicketTool } from "../../src/tools/create-ticket.ts";
+import { runWithMockContext, setupRequestContextMocks } from "../utils/test-helpers.js";
 
 // Mock Zendesk client
 const mockCreateTicket = vi.fn();
@@ -12,9 +13,7 @@ vi.mock("../../src/utils/zendesk-client.ts", () => ({
 }));
 
 describe("Create Ticket Tool", () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
+	setupRequestContextMocks();
 
 	describe("createTicketTool definition", () => {
 		it("should have correct tool definition", () => {
@@ -40,13 +39,15 @@ describe("Create Ticket Tool", () => {
 
 			mockCreateTicket.mockResolvedValue({ ticket: mockTicket });
 
-			const result = await handleCreateTicket({
-				subject: "Test Ticket",
-				comment: {
-					body: "This is a test ticket",
-				},
-				priority: "normal",
-				type: "question",
+			const result = await runWithMockContext(async () => {
+				return handleCreateTicket({
+					subject: "Test Ticket",
+					comment: {
+						body: "This is a test ticket",
+					},
+					priority: "normal",
+					type: "question",
+				});
 			});
 
 			expect(result.content[0].type).toBe("text");
@@ -57,9 +58,11 @@ describe("Create Ticket Tool", () => {
 		});
 
 		it("should handle validation errors", async () => {
-			const result = await handleCreateTicket({
-				// Missing required subject and comment
-				priority: "normal",
+			const result = await runWithMockContext(async () => {
+				return handleCreateTicket({
+					// Missing required subject and comment
+					priority: "normal",
+				} as any);
 			});
 
 			expect(result.content[0].type).toBe("text");
@@ -71,11 +74,13 @@ describe("Create Ticket Tool", () => {
 		it("should handle API errors", async () => {
 			mockCreateTicket.mockRejectedValue(new Error("API Error"));
 
-			const result = await handleCreateTicket({
-				subject: "Test Ticket",
-				comment: {
-					body: "This is a test ticket",
-				},
+			const result = await runWithMockContext(async () => {
+				return handleCreateTicket({
+					subject: "Test Ticket",
+					comment: {
+						body: "This is a test ticket",
+					},
+				});
 			});
 
 			expect(result.content[0].type).toBe("text");
@@ -98,11 +103,13 @@ describe("Create Ticket Tool", () => {
 
 			mockCreateTicket.mockResolvedValue({ ticket: mockTicket });
 
-			await handleCreateTicket({
-				subject: "Test Ticket",
-				comment: {
-					body: "This is a test ticket",
-				},
+			await runWithMockContext(async () => {
+				return handleCreateTicket({
+					subject: "Test Ticket",
+					comment: {
+						body: "This is a test ticket",
+					},
+				});
 			});
 
 			expect(mockCreateTicket).toHaveBeenCalledWith({
