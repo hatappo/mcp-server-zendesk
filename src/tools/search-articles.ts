@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { getZendeskClient } from "../utils/zendesk-client.ts";
+import { requestContext } from "../utils/request-context.js";
+import { getZendeskClient } from "../utils/zendesk-client.js";
 
 const SearchArticlesSchema = z.object({
 	query: z.string().describe("Search query for articles"),
@@ -26,7 +27,13 @@ export const searchArticlesTool = {
 export async function handleSearchArticles(args: any) {
 	try {
 		const validatedArgs = SearchArticlesSchema.parse(args);
-		const client = getZendeskClient();
+
+		// リクエストコンテキストから認証情報とロガーを取得
+		const authContext = requestContext.getCurrentAuthContext();
+		const logger = requestContext.getCurrentLogger();
+
+		// 認証コンテキストを使用してZendeskクライアントを取得
+		const client = getZendeskClient(authContext, logger);
 
 		const searchParams = {
 			query: validatedArgs.query,
@@ -34,6 +41,16 @@ export async function handleSearchArticles(args: any) {
 			per_page: validatedArgs.per_page,
 			page: validatedArgs.page,
 		};
+
+		logger.info(
+			{
+				query: validatedArgs.query,
+				locale: validatedArgs.locale,
+				page: validatedArgs.page,
+				per_page: validatedArgs.per_page,
+			},
+			"Searching Zendesk articles",
+		);
 
 		const response = await client.helpcenter.search.searchArticles(searchParams);
 		const articles = response.result?.results || [];
@@ -46,6 +63,14 @@ export async function handleSearchArticles(args: any) {
 			created_at: article.created_at,
 			updated_at: article.updated_at,
 		}));
+
+		logger.info(
+			{
+				query: validatedArgs.query,
+				articlesFound: articles.length,
+			},
+			"Zendesk article search completed",
+		);
 
 		return {
 			content: [
@@ -66,6 +91,9 @@ export async function handleSearchArticles(args: any) {
 			],
 		};
 	} catch (error) {
+		const logger = requestContext.getCurrentLogger();
+		logger.error({ error, query: args?.query }, "Failed to search Zendesk articles");
+
 		return {
 			content: [
 				{

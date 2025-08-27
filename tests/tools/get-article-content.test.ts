@@ -1,23 +1,23 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { handleGetArticleContent } from "../../src/tools/get-article-content.ts";
-import { getZendeskClient } from "../../src/utils/zendesk-client.ts";
+import { runWithMockContext, setupRequestContextMocks } from "../utils/test-helpers.js";
 
-vi.mock("../../src/utils/zendesk-client.ts");
-
-describe("handleGetArticleContent", () => {
-	const mockClient = {
+// Mock Zendesk client
+const mockShow = vi.fn();
+const mockShowWithLocale = vi.fn();
+vi.mock("../../src/utils/zendesk-client.ts", () => ({
+	getZendeskClient: vi.fn(() => ({
 		helpcenter: {
 			articles: {
-				show: vi.fn(),
-				showWithLocale: vi.fn(),
+				show: mockShow,
+				showWithLocale: mockShowWithLocale,
 			},
 		},
-	};
+	})),
+}));
 
-	beforeEach(() => {
-		vi.clearAllMocks();
-		(getZendeskClient as any).mockReturnValue(mockClient);
-	});
+describe("handleGetArticleContent", () => {
+	setupRequestContextMocks();
 
 	it("should successfully retrieve an article by ID", async () => {
 		const mockArticle = {
@@ -35,16 +35,18 @@ describe("handleGetArticleContent", () => {
 			locale: "ja-jp",
 		};
 
-		mockClient.helpcenter.articles.showWithLocale.mockResolvedValue({
+		mockShowWithLocale.mockResolvedValue({
 			result: mockArticle,
 		});
 
-		const result = await handleGetArticleContent({
-			article_id: 123456,
-			locale: "ja-jp",
+		const result = await runWithMockContext(async () => {
+			return handleGetArticleContent({
+				article_id: 123456,
+				locale: "ja-jp",
+			});
 		});
 
-		expect(mockClient.helpcenter.articles.showWithLocale).toHaveBeenCalledWith("ja-jp", 123456);
+		expect(mockShowWithLocale).toHaveBeenCalledWith("ja-jp", 123456);
 		expect(result.content[0].type).toBe("text");
 
 		const response = JSON.parse(result.content[0].text);
@@ -74,28 +76,32 @@ describe("handleGetArticleContent", () => {
 			locale: "ja",
 		};
 
-		mockClient.helpcenter.articles.showWithLocale.mockResolvedValue({
+		mockShowWithLocale.mockResolvedValue({
 			result: mockArticle,
 		});
 
-		const result = await handleGetArticleContent({
-			article_id: 123456,
+		const result = await runWithMockContext(async () => {
+			return handleGetArticleContent({
+				article_id: 123456,
+			});
 		});
 
-		expect(mockClient.helpcenter.articles.showWithLocale).toHaveBeenCalledWith("ja", 123456);
+		expect(mockShowWithLocale).toHaveBeenCalledWith("ja", 123456);
 		const response = JSON.parse(result.content[0].text);
 		expect(response.success).toBe(true);
 		expect(response.article.locale).toBe("ja");
 	});
 
 	it("should handle article not found error", async () => {
-		mockClient.helpcenter.articles.showWithLocale.mockResolvedValue({
+		mockShowWithLocale.mockResolvedValue({
 			result: null,
 		});
 
-		const result = await handleGetArticleContent({
-			article_id: 999999,
-			locale: "ja",
+		const result = await runWithMockContext(async () => {
+			return handleGetArticleContent({
+				article_id: 999999,
+				locale: "ja",
+			});
 		});
 
 		const response = JSON.parse(result.content[0].text);
@@ -104,13 +110,15 @@ describe("handleGetArticleContent", () => {
 	});
 
 	it("should handle API errors", async () => {
-		mockClient.helpcenter.articles.showWithLocale.mockRejectedValue(
+		mockShowWithLocale.mockRejectedValue(
 			new Error("Failed to fetch article: API Error: Forbidden"),
 		);
 
-		const result = await handleGetArticleContent({
-			article_id: 123456,
-			locale: "ja",
+		const result = await runWithMockContext(async () => {
+			return handleGetArticleContent({
+				article_id: 123456,
+				locale: "ja",
+			});
 		});
 
 		const response = JSON.parse(result.content[0].text);
@@ -119,8 +127,10 @@ describe("handleGetArticleContent", () => {
 	});
 
 	it("should handle invalid input", async () => {
-		const result = await handleGetArticleContent({
-			article_id: "not-a-number",
+		const result = await runWithMockContext(async () => {
+			return handleGetArticleContent({
+				article_id: "not-a-number" as any,
+			});
 		});
 
 		const response = JSON.parse(result.content[0].text);

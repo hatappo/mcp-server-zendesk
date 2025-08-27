@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { getZendeskClient } from "../utils/zendesk-client.ts";
+import { AuthContextManager } from "../utils/auth-context.js";
+import { requestContext } from "../utils/request-context.js";
+import { getZendeskClient } from "../utils/zendesk-client.js";
 
 const CreateTicketSchema = z.object({
 	subject: z.string().describe("Subject of the ticket"),
@@ -62,8 +64,19 @@ export const createTicketTool = {
 export async function handleCreateTicket(args: any) {
 	try {
 		const validatedArgs = CreateTicketSchema.parse(args);
-		const client = getZendeskClient();
 
+		// リクエストコンテキストから認証情報とロガーを取得
+		const authContext = requestContext.getCurrentAuthContext();
+		const logger = requestContext.getCurrentLogger();
+
+		// 認証コンテキストを使用してZendeskクライアントを取得
+		const client = getZendeskClient(authContext, logger);
+
+		// リクエスタメールを動的に設定
+		const authManager = AuthContextManager.getInstance(logger);
+		const requesterEmail = authManager.getRequesterEmail(authContext, validatedArgs.requester?.email);
+
+		// チケットデータを構築
 		const ticketData = {
 			ticket: {
 				subject: validatedArgs.subject,
@@ -71,12 +84,35 @@ export async function handleCreateTicket(args: any) {
 				priority: validatedArgs.priority,
 				type: validatedArgs.type,
 				tags: validatedArgs.tags,
-				requester: validatedArgs.requester,
+				requester: requesterEmail
+					? {
+							...validatedArgs.requester,
+							email: requesterEmail,
+						}
+					: validatedArgs.requester,
 			},
 		};
 
+		logger.info(
+			{
+				subject: validatedArgs.subject,
+				requesterEmail,
+				userEmail: authContext.userEmail,
+				effectiveUsername: authContext.effectiveUsername,
+			},
+			"Creating Zendesk ticket",
+		);
+
 		const response = await client.tickets.create(ticketData);
 		const ticket = response.ticket;
+
+		logger.info(
+			{
+				ticketId: ticket.id,
+				ticketUrl: ticket.url,
+			},
+			"Zendesk ticket created successfully",
+		);
 
 		return {
 			content: [
@@ -94,6 +130,7 @@ export async function handleCreateTicket(args: any) {
 								type: ticket.type,
 								created_at: ticket.created_at,
 								updated_at: ticket.updated_at,
+								requester_email: requesterEmail,
 							},
 						},
 						null,
@@ -103,6 +140,9 @@ export async function handleCreateTicket(args: any) {
 			],
 		};
 	} catch (error) {
+		const logger = requestContext.getCurrentLogger();
+		logger.error({ error }, "Failed to create Zendesk ticket");
+
 		return {
 			content: [
 				{
